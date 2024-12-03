@@ -18,8 +18,9 @@ const port = process.env.PORT || 3001;
 io.on('connection', (socket) => {
     console.log('a user connected');
 
-    socket.on('chat message', (msg) => {
-        io.emit('chat message', msg);
+    socket.on('hit', (playerId, hittedPlayerId) => {
+        console.log({player: playerId, hit_to: hittedPlayerId});
+        io.emit('recived_blow', playerId);
     });
 });
 
