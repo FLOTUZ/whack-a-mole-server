@@ -1,6 +1,8 @@
+import { randomUUID } from "crypto";
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import cors from "cors";
 
 const app = express();
 const server = createServer(app);
@@ -16,12 +18,23 @@ const port = process.env.PORT || 3001;
 const playersList = [];
 let roomName = "El lobby de papayón";
 
+app.use(cors());
+
 io.on("connection", (socket) => {
   console.log("a user connected");
 
   socket.on("hit", (playerId, hittedPlayerId) => {
-    console.log({ player: playerId, hit_to: hittedPlayerId });
-    io.emit("recived_blow", playerId);
+    console.log({ playerId, hittedPlayerId });
+    // select the socket id of the player
+    const hittedUser = playersList.find(
+      (player) => player.id === hittedPlayerId
+    );
+
+    const hitterUser = playersList.find((player) => player.name === playerId);
+
+    console.log({ hittedUser, hitterUser });
+    // targetId: el ID del socket del cliente al que quieres enviar el mensaje
+    io.to(hittedUser.socketId).emit("recived_blow", hitterUser.name);
   });
 
   socket.on("playerJoined", (name, lobbyName) => {
@@ -35,12 +48,17 @@ io.on("connection", (socket) => {
       playersList.findIndex((player) => player.name === name) === -1 &&
       name.length > 0
     ) {
-      playersList.push({ name, id: socket.id });
+      const id = randomUUID();
+      playersList.push({ name, id, socketId: socket.id });
     }
 
     io.emit("playersList", { playersList });
-    console.log({roomName});
     io.emit("roomName", { roomName });
+  });
+
+  socket.on("startGame", () => {
+    console.log("startGame");
+    io.emit("startGame", { playersList });
   });
 
   socket.on("disconnect", () => {
@@ -50,6 +68,11 @@ io.on("connection", (socket) => {
     ),
       io.emit("playersList", { playersList, roomName });
   });
+});
+
+app.get("/players", (req, res) => {
+  console.log({ playersList });
+  res.json({ playersList });
 });
 
 server.listen(port, () => {
