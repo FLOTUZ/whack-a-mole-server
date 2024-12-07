@@ -14,6 +14,7 @@ const io = new Server(server, {
 const port = process.env.PORT || 3001;
 
 const playersList = [];
+let roomName = "El lobby de papayón";
 
 io.on("connection", (socket) => {
   console.log("a user connected");
@@ -23,10 +24,23 @@ io.on("connection", (socket) => {
     io.emit("recived_blow", playerId);
   });
 
-  socket.on("playerJoined", (name, lobbyId) => {
-    console.log("player joined", { name, lobbyId });
-    playersList.push({ name, lobbyId, id: socket.id });
-    io.emit("playersList", playersList);
+  socket.on("playerJoined", (name, lobbyName) => {
+    if (playersList.length === 0) {
+      roomName = lobbyName;
+    }
+
+    console.log("playerJoined", name);
+    //add player if not exist in the list
+    if (
+      playersList.findIndex((player) => player.name === name) === -1 &&
+      name.length > 0
+    ) {
+      playersList.push({ name, id: socket.id });
+    }
+
+    io.emit("playersList", { playersList });
+    console.log({roomName});
+    io.emit("roomName", { roomName });
   });
 
   socket.on("disconnect", () => {
@@ -34,7 +48,7 @@ io.on("connection", (socket) => {
       playersList.findIndex((player) => player.id === socket.id),
       1
     ),
-      io.emit("playersList", playersList);
+      io.emit("playersList", { playersList, roomName });
   });
 });
 
